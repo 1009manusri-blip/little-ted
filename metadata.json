@@ -1,0 +1,6 @@
+{
+  "name": "haX.baby 🎀 Retro-Kawaii Internet Playground",
+  "description": "An ultra-cute early-2000s personal web playground and hackathon toybox with stickers, retro games, virtual pet, and adorable interactive surprises.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

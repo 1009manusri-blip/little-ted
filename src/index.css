@@ -1,0 +1,285 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Fredoka', cursive, system-ui, sans-serif;
+    --font-body: 'Quicksand', system-ui, sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: #FFF9F5;
+    color: #4A1D36;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+
+  code, pre, .font-retro {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Custom retro-kawaii utilities */
+.font-display {
+  font-family: 'Fredoka', cursive, system-ui, sans-serif;
+}
+
+.font-body {
+  font-family: 'Quicksand', system-ui, sans-serif;
+}
+
+.font-retro {
+  font-family: 'Space Mono', monospace;
+}
+
+/* Retro Chunky Shadows */
+.shadow-retro-pink {
+  box-shadow: 3px 3px 0px #FF94B9;
+}
+
+.shadow-retro-pink-lg {
+  box-shadow: 5px 5px 0px #FF82AE;
+}
+
+.shadow-retro-plum {
+  box-shadow: 4px 4px 0px #3B1B3C;
+}
+
+.shadow-retro-plum-sm {
+  box-shadow: 2px 2px 0px #3B1B3C;
+}
+
+.shadow-retro-plum-lg {
+  box-shadow: 6px 6px 0px #3B1B3C;
+}
+
+.shadow-retro-lavender {
+  box-shadow: 4px 4px 0px #B99AFF;
+}
+
+.shadow-retro-yellow {
+  box-shadow: 4px 4px 0px #F5C518;
+}
+
+.shadow-retro-mint {
+  box-shadow: 4px 4px 0px #5DC78A;
+}
+
+/* Button interactive active & hover states */
+.btn-chunky {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms ease, background-color 200ms ease, filter 200ms ease;
+  will-change: transform;
+}
+
+.btn-chunky:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 6px 6px 0px #3B1B3C;
+}
+
+.btn-chunky:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 1px 1px 0px #3B1B3C !important;
+}
+
+.btn-chunky:focus-visible {
+  outline: 3px solid #FF70B8;
+  outline-offset: 2px;
+}
+
+/* Card lift and soft pastel shadow bloom */
+.card-hover {
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, border-color 260ms ease;
+  will-change: transform, box-shadow;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 8px 8px 0px #3B1B3C;
+}
+
+/* Cute Interactive Sticker & Toy hover effects */
+.sticker-hover {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 200ms ease;
+  will-change: transform;
+}
+
+.sticker-hover:hover {
+  transform: scale(1.16) rotate(6deg);
+  filter: drop-shadow(0 4px 8px rgba(255, 112, 184, 0.3));
+}
+
+.star-spin-hover {
+  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.star-spin-hover:hover {
+  transform: rotate(25deg) scale(1.2);
+}
+
+.heart-pop-hover {
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.heart-pop-hover:hover {
+  transform: scale(1.22);
+}
+
+.badge-pill-hover {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.badge-pill-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 3px 3px 0px #3B1B3C;
+}
+
+/* Accessible focus & disabled states */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #FF70B8;
+  outline-offset: 2px;
+}
+
+button:disabled,
+input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Pattern Backgrounds */
+.bg-grid-pattern {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 148, 185, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 148, 185, 0.15) 1px, transparent 1px);
+}
+
+.bg-polka-pattern {
+  background-size: 20px 20px;
+  background-image: radial-gradient(circle, rgba(255, 112, 184, 0.18) 2px, transparent 2px);
+}
+
+.bg-notebook-pattern {
+  background-size: 100% 28px;
+  background-image: linear-gradient(to bottom, transparent 27px, rgba(131, 217, 255, 0.35) 28px);
+}
+
+/* Sparkle Animations */
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes rainbow-shift {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.animate-float {
+  animation: float-gentle 4s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-gentle 6s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 2.5s ease-in-out infinite;
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Chaos Mode styles */
+body.chaos-mode {
+  animation: rainbow-shift 12s linear infinite;
+}
+
+body.chaos-mode .chaos-glow {
+  box-shadow: 0 0 25px rgba(255, 112, 184, 0.8), 0 0 15px rgba(255, 230, 109, 0.6) !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FFF0F5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FFB3D1;
+  border-radius: 5px;
+  border: 2px solid #FFF0F5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF80B2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-bounce-subtle,
+  .animate-wiggle,
+  .animate-marquee {
+    animation: none !important;
+  }
+}
