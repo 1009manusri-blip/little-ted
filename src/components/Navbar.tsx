@@ -10,6 +10,8 @@ interface NavbarProps {
   onTriggerSurprise: () => void;
   activeSection: string;
   onNavigate: (sectionId: string) => void;
+  isNightMode: boolean;
+  onToggleNightMode: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,6 +22,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTriggerSurprise,
   activeSection,
   onNavigate,
+  isNightMode,
+  onToggleNightMode,
 }) => {
   const handleNavClick = (id: string) => {
     soundManager.playPop();
@@ -116,9 +120,30 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Zone 3: Primary Action & Quick Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Day / Night Mode Toggle */}
+          <button
+            type="button"
+            onClick={onToggleNightMode}
+            aria-label={isNightMode ? "Switch to day mode" : "Switch to night mode"}
+            title={isNightMode ? "Switch to day mode (☀️)" : "Switch to night mode (🌙)"}
+            className={`group p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border-2 transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-retro-plum-sm hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-[#FF70B8] ${
+              isNightMode
+                ? 'bg-[#2E184D] border-[#8B5CF6] text-[#FFE873] hover:bg-[#3B1F63]'
+                : 'bg-[#FFF9E6] border-[#3B1B3C] text-[#8B3A62] hover:bg-[#FFF0C2]'
+            }`}
+          >
+            <span className="text-sm sm:text-base transition-transform duration-300 group-hover:rotate-12 inline-block leading-none">
+              {isNightMode ? '🌙' : '☀️'}
+            </span>
+            <span className="hidden sm:inline text-[11px] font-retro font-bold">
+              {isNightMode ? 'Night' : 'Day'}
+            </span>
+          </button>
+
           {/* Audio Mute Button */}
           <button
+            type="button"
             onClick={onToggleMute}
             aria-label={isMuted ? "Unmute gentle sounds" : "Mute sounds"}
             className="p-1.5 sm:p-2 rounded-xl border border-[#FBCFE8] bg-white hover:bg-[#FFF0F5] hover:scale-105 active:scale-95 text-[#8B1E4B] shadow-sm transition-all duration-200 cursor-pointer"

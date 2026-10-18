@@ -24,6 +24,37 @@ export default function App() {
   const [chaosMode, setChaosMode] = useState(false);
   const [isSurpriseOpen, setIsSurpriseOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  const [isNightMode, setIsNightMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('ted_night_mode');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Day/Night mode toggle with musical click
+  const handleToggleNightMode = () => {
+    setIsNightMode((prev) => {
+      const next = !prev;
+      soundManager.playLightClick(next);
+      return next;
+    });
+  };
+
+  // Sync Day/Night mode class and persistence
+  useEffect(() => {
+    try {
+      localStorage.setItem('ted_night_mode', String(isNightMode));
+    } catch {
+      // ignore
+    }
+    if (isNightMode) {
+      document.body.classList.add('night-mode');
+    } else {
+      document.body.classList.remove('night-mode');
+    }
+  }, [isNightMode]);
 
   // Master audio toggle
   const handleToggleMute = () => {
@@ -99,6 +130,8 @@ export default function App() {
         onTriggerSurprise={handleTriggerSurprise}
         activeSection={activeSection}
         onNavigate={scrollToSection}
+        isNightMode={isNightMode}
+        onToggleNightMode={handleToggleNightMode}
       />
 
       {/* Retro Marquee Announcement */}
@@ -110,6 +143,7 @@ export default function App() {
         <HeroSection
           onPeekCreations={() => scrollToSection('creations')}
           onMyStory={() => scrollToSection('story')}
+          isNightMode={isNightMode}
         />
 
         {/* 2. BABY PROFILE — ALL ABOUT LITTLE TED 🍼 */}

@@ -12,6 +12,7 @@
     background-color: #FFF9F5;
     color: #4A1D36;
     overflow-x: hidden;
+    transition: background-color 0.35s ease, color 0.35s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -282,4 +283,110 @@ body.chaos-mode .chaos-glow {
   .animate-marquee {
     animation: none !important;
   }
+}
+
+/* =========================================================
+   COZY NIGHTTIME DREAMLAND THEME (NIGHT MODE) ♡
+   ========================================================= */
+body.night-mode {
+  background-color: #170E29;
+  color: #FCE7F3;
+}
+
+/* Night Mode Header */
+body.night-mode header {
+  background-color: rgba(26, 16, 46, 0.94);
+  border-bottom-color: #552D70;
+}
+
+/* Night Mode Marquee */
+body.night-mode .bg-\[\#FFEDF4\] {
+  background-color: #21133B !important;
+  border-bottom-color: #552D70 !important;
+}
+
+/* Night Mode Text & Accents */
+body.night-mode .text-\[\#751A3D\] {
+  color: #FFD1E3 !important;
+}
+
+body.night-mode .text-\[\#8B1E4B\],
+body.night-mode .text-\[\#8B3A62\],
+body.night-mode .text-\[\#6B2848\],
+body.night-mode .text-\[\#4A1D36\] {
+  color: #F1D4E5 !important;
+}
+
+body.night-mode .text-\[\#A24269\] {
+  color: #FFA5CB !important;
+}
+
+/* Night Mode Section Backgrounds & Gradients */
+body.night-mode .from-\[\#FFF9F5\] {
+  --tw-gradient-from: #170E29 var(--tw-gradient-from-position) !important;
+}
+
+body.night-mode .via-\[\#FFF1F6\] {
+  --tw-gradient-stops: var(--tw-gradient-from), #261442 var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+
+body.night-mode .to-\[\#FFF9F5\] {
+  --tw-gradient-to: #170E29 var(--tw-gradient-to-position) !important;
+}
+
+body.night-mode .bg-\[\#FFF9F5\],
+body.night-mode .bg-\[\#FFF9FA\],
+body.night-mode .bg-\[\#FFFDF9\],
+body.night-mode .bg-\[\#FFF8FA\] {
+  background-color: #1F1336 !important;
+}
+
+/* Section divider borders in night mode */
+body.night-mode .border-\[\#FFD1E3\],
+body.night-mode .border-\[\#FFD6E8\],
+body.night-mode .border-\[\#FFCCD5\],
+body.night-mode .border-\[\#FBCFE8\] {
+  border-color: #552D70 !important;
+}
+
+/* Night Mode Cards & Shadows */
+body.night-mode .card-hover {
+  background-color: #261642 !important;
+  border-color: #3B1B3C !important;
+  box-shadow: 4px 4px 0px #0D0717 !important;
+}
+
+body.night-mode .card-hover:hover {
+  box-shadow: 7px 7px 0px #0D0717 !important;
+}
+
+/* Starry night subtle sprinkle across hero in night mode */
+body.night-mode #home::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1.5px 1.5px at 15% 20%, #FFF9C4 100%, transparent),
+    radial-gradient(2px 2px at 85% 15%, #FFE082 100%, transparent),
+    radial-gradient(1.5px 1.5px at 70% 75%, #F8BBD0 100%, transparent),
+    radial-gradient(2px 2px at 25% 65%, #FFFFFF 100%, transparent),
+    radial-gradient(1px 1px at 50% 30%, #FFE082 100%, transparent),
+    radial-gradient(1.5px 1.5px at 90% 85%, #E1BEE7 100%, transparent);
+  background-size: 100% 100%;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* Custom Scrollbar in night mode */
+body.night-mode ::-webkit-scrollbar-track {
+  background: #170E29;
+}
+
+body.night-mode ::-webkit-scrollbar-thumb {
+  background: #552D70;
+  border: 2px solid #170E29;
+}
+
+body.night-mode ::-webkit-scrollbar-thumb:hover {
+  background: #783F9C;
 }

@@ -8,11 +8,13 @@ import { Heart, Sparkles } from 'lucide-react';
 interface HeroSectionProps {
   onPeekCreations: () => void;
   onMyStory: () => void;
+  isNightMode?: boolean;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onPeekCreations,
   onMyStory,
+  isNightMode = false,
 }) => {
   const [starClicks, setStarClicks] = useState(0);
   const [showSecretDream, setShowSecretDream] = useState(false);
@@ -145,7 +147,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </div>
 
               {/* Genuine 3D Ted Nursery Experience */}
-              <TedHeroScene />
+              <TedHeroScene isNightMode={isNightMode} />
             </div>
           </div>
         </div>

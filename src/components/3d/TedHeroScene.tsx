@@ -16,9 +16,10 @@ import { Mascot } from '../Mascot';
 interface TedHeroSceneProps {
   onPet?: () => void;
   className?: string;
+  isNightMode?: boolean;
 }
 
-export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '' }) => {
+export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '', isNightMode = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [webglSupported, setWebglSupported] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
@@ -35,6 +36,11 @@ export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '
     moon: THREE.Mesh;
     blocks: THREE.Group[];
     heartParticles: THREE.Mesh[];
+    ambientLight: THREE.AmbientLight;
+    hemiLight: THREE.HemisphereLight;
+    keyLight: THREE.DirectionalLight;
+    rimLight: THREE.DirectionalLight;
+    fillLight: THREE.PointLight;
     animId: number;
     clock: THREE.Clock;
     targetRotationY: number;
@@ -77,14 +83,14 @@ export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '
 
       setTimeout(() => {
         if (sceneRef.current) {
-          sceneRef.current.ted.setExpression('happy');
+          sceneRef.current.ted.setExpression(isNightMode ? 'sleepy' : 'happy');
         }
       }, 1600);
     }
 
     setPetNotice('Ted giggles with sweet dreams! 💖');
     setTimeout(() => setPetNotice(null), 2500);
-  }, [onPet]);
+  }, [onPet, isNightMode]);
 
   useEffect(() => {
     if (!isWebGLAvailable()) {
@@ -245,6 +251,11 @@ export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '
       moon,
       blocks,
       heartParticles: [],
+      ambientLight,
+      hemiLight,
+      keyLight,
+      rimLight,
+      fillLight,
       animId: 0,
       clock,
       targetRotationY: 0,
@@ -255,6 +266,25 @@ export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '
       isDragging: false,
       previousMouseX: 0,
     };
+
+    if (isNightMode) {
+      ambientLight.color.setHex(0x503b78);
+      ambientLight.intensity = 1.1;
+      hemiLight.color.setHex(0x685299);
+      hemiLight.groundColor.setHex(0x241438);
+      hemiLight.intensity = 0.9;
+      keyLight.color.setHex(0xdce5ff);
+      keyLight.intensity = 1.4;
+      rimLight.color.setHex(0xd8b4fe);
+      rimLight.intensity = 1.6;
+      fillLight.color.setHex(0xffcb77);
+      fillLight.intensity = 1.2;
+      ted.setExpression('sleepy');
+      if ((moon.material as THREE.MeshStandardMaterial).emissive) {
+        (moon.material as THREE.MeshStandardMaterial).emissive.setHex(0xffea78);
+        (moon.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.45;
+      }
+    }
 
     // Pointer move listener on canvas
     const handlePointerMove = (e: PointerEvent) => {
@@ -410,6 +440,48 @@ export const TedHeroScene: React.FC<TedHeroSceneProps> = ({ onPet, className = '
       }
     };
   }, []);
+
+  // Dynamic update when Day/Night mode toggles
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const { ambientLight, hemiLight, keyLight, rimLight, fillLight, ted, moon } = sceneRef.current;
+
+    if (isNightMode) {
+      ambientLight.color.setHex(0x503b78);
+      ambientLight.intensity = 1.1;
+      hemiLight.color.setHex(0x685299);
+      hemiLight.groundColor.setHex(0x241438);
+      hemiLight.intensity = 0.9;
+      keyLight.color.setHex(0xdce5ff);
+      keyLight.intensity = 1.4;
+      rimLight.color.setHex(0xd8b4fe);
+      rimLight.intensity = 1.6;
+      fillLight.color.setHex(0xffcb77);
+      fillLight.intensity = 1.2;
+      ted.setExpression('sleepy');
+      if ((moon.material as THREE.MeshStandardMaterial).emissive) {
+        (moon.material as THREE.MeshStandardMaterial).emissive.setHex(0xffea78);
+        (moon.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.45;
+      }
+    } else {
+      ambientLight.color.setHex(0xfff5f8);
+      ambientLight.intensity = 1.4;
+      hemiLight.color.setHex(0xffeef5);
+      hemiLight.groundColor.setHex(0xe0d7ff);
+      hemiLight.intensity = 0.8;
+      keyLight.color.setHex(0xfffdf2);
+      keyLight.intensity = 1.8;
+      rimLight.color.setHex(0xb99aff);
+      rimLight.intensity = 0.9;
+      fillLight.color.setHex(0xffd1e3);
+      fillLight.intensity = 0.8;
+      ted.setExpression('happy');
+      if ((moon.material as THREE.MeshStandardMaterial).emissive) {
+        (moon.material as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
+        (moon.material as THREE.MeshStandardMaterial).emissiveIntensity = 0;
+      }
+    }
+  }, [isNightMode]);
 
   return (
     <div
