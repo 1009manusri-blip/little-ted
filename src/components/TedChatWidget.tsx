@@ -29,6 +29,7 @@ export const TedChatWidget: React.FC = () => {
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,122 +44,168 @@ export const TedChatWidget: React.FC = () => {
       // Focus input on desktop
       setTimeout(() => inputRef.current?.focus(), 150);
     }
-  }, [isOpen, messages, isLoading]);
+  }, [isOpen, messages, isLoading, isThinking]);
 
-  const handleSendMessage = async (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string, isRetry = false) => {
     const text = (textToSend ?? inputText).trim();
     // Guard against blank messages or duplicate requests while already waiting
     if (!text || isLoading) return;
 
     soundManager.playPop();
 
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
+    let updatedMessages: Message[];
+    if (isRetry) {
+      // Keep existing messages (error already stripped)
+      updatedMessages = [...messages];
+    } else {
+      const userMessage: Message = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      setInputText('');
+    }
 
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInputText('');
-    // 1. Immediately show typing indicator for zero-delay perceived response
     setIsLoading(true);
+    setIsThinking(true);
 
     const assistantMsgId = `ted-${Date.now()}`;
     let streamedText = '';
     let hasCreatedBubble = false;
 
+    const outboundMessages = updatedMessages
+      .filter((m) => !m.isError)
+      .map((m) => ({ role: m.role, text: m.text }));
+
     try {
-      // 2. Fetch with streaming enabled
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          stream: true,
-          messages: newMessages
-            .filter((m) => !m.isError)
-            .map((m) => ({
-              role: m.role,
-              text: m.text,
-            })),
-        }),
-      });
+      // 1. Attempt streaming response
+      let streamSucceeded = false;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Connection glitch in dreamland');
-      }
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            stream: true,
+            messages: outboundMessages,
+          }),
+        });
 
-      if (!response.body) {
-        throw new Error('Streaming not supported by browser');
-      }
+        if (response.ok && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith('data: ')) continue;
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') {
+                continue;
+              }
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
-          const dataStr = trimmed.slice(6);
-          if (dataStr === '[DONE]') {
-            break;
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.error) {
+                  throw new Error(parsed.message || parsed.error);
+                }
+                if (parsed.text) {
+                  streamedText += parsed.text;
+                  if (!hasCreatedBubble) {
+                    hasCreatedBubble = true;
+                    setIsThinking(false);
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        id: assistantMsgId,
+                        role: 'assistant',
+                        text: streamedText,
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      },
+                    ]);
+                  } else {
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === assistantMsgId ? { ...m, text: streamedText } : m))
+                    );
+                  }
+                  scrollToBottom();
+                }
+              } catch (jsonErr: any) {
+                if (jsonErr.message && !jsonErr.message.includes('JSON')) {
+                  throw jsonErr;
+                }
+              }
+            }
           }
 
-          try {
-            const parsed = JSON.parse(dataStr);
-            if (parsed.error) {
-              throw new Error(parsed.message || parsed.error);
-            }
-            if (parsed.text) {
-              streamedText += parsed.text;
-              if (!hasCreatedBubble) {
-                // First token received: hide indicator and spawn speech bubble
-                hasCreatedBubble = true;
-                setIsLoading(false);
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: assistantMsgId,
-                    role: 'assistant',
-                    text: streamedText,
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  },
-                ]);
-              } else {
-                // Subsequent tokens: update bubble text progressively
-                setMessages((prev) =>
-                  prev.map((m) => (m.id === assistantMsgId ? { ...m, text: streamedText } : m))
-                );
-              }
-              scrollToBottom();
-            }
-          } catch (jsonErr: any) {
-            if (jsonErr.message && jsonErr.message.includes('eep!')) {
-              throw jsonErr;
-            }
+          if (streamedText.trim()) {
+            streamSucceeded = true;
+            soundManager.playChime();
           }
         }
+      } catch (streamErr) {
+        console.warn('Streaming attempt failed, trying non-streaming fallback:', streamErr);
       }
 
-      if (!streamedText.trim()) {
-        throw new Error('Empty reply received');
-      }
+      // 2. If streaming did not produce a reply, fallback to standard non-streaming request
+      if (!streamSucceeded) {
+        const fallbackRes = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            stream: false,
+            messages: outboundMessages,
+          }),
+        });
 
-      soundManager.playChime();
+        if (!fallbackRes.ok) {
+          const errData = await fallbackRes.json().catch(() => ({}));
+          throw new Error(errData.message || 'Dream connection interrupted');
+        }
+
+        const data = await fallbackRes.json();
+        const reply = data.reply || '';
+        if (!reply.trim()) {
+          throw new Error('Empty response received');
+        }
+
+        setIsThinking(false);
+        if (hasCreatedBubble) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantMsgId ? { ...m, text: reply.trim() } : m))
+          );
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: assistantMsgId,
+              role: 'assistant',
+              text: reply.trim(),
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+        }
+        soundManager.playChime();
+      }
     } catch (err: any) {
       console.warn('Ted chat error:', err);
+      setIsThinking(false);
+      const errMsg = 'eep! ted lost his dream connection for a tiny second... can we try again? ♡';
       if (hasCreatedBubble) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -166,7 +213,7 @@ export const TedChatWidget: React.FC = () => {
               ? {
                   ...m,
                   isError: true,
-                  text: 'eep! ted lost his dream connection for a tiny second... can we try again? ♡',
+                  text: errMsg,
                 }
               : m
           )
@@ -177,7 +224,7 @@ export const TedChatWidget: React.FC = () => {
           {
             id: `err-${Date.now()}`,
             role: 'assistant',
-            text: 'eep! ted lost his dream connection for a tiny second... can we try again? ♡',
+            text: errMsg,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isError: true,
           },
@@ -185,6 +232,8 @@ export const TedChatWidget: React.FC = () => {
       }
     } finally {
       setIsLoading(false);
+      setIsThinking(false);
+      setTimeout(() => inputRef.current?.focus(), 120);
     }
   };
 
@@ -200,10 +249,10 @@ export const TedChatWidget: React.FC = () => {
   const retryLastMessage = () => {
     // Find the last user message
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-    if (lastUserMsg) {
-      // Remove any trailing error message
+    if (lastUserMsg && !isLoading) {
+      // Remove trailing error messages
       setMessages((prev) => prev.filter((m) => !m.isError));
-      handleSendMessage(lastUserMsg.text);
+      handleSendMessage(lastUserMsg.text, true);
     }
   };
 
@@ -358,7 +407,7 @@ export const TedChatWidget: React.FC = () => {
             })}
 
             {/* Bouncing Stars Typing Indicator */}
-            {isLoading && (
+            {isThinking && (
               <div className="flex items-start">
                 <div className="bg-[#FFEBF2] border-2 border-[#FFC2DB] rounded-2xl rounded-tl-xs px-3.5 py-2.5 shadow-xs flex items-center gap-1.5 text-xs text-[#8B1E4B] font-retro font-bold">
                   <span>ted is thinking</span>

@@ -14,19 +14,27 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
 
-// Server-side Gemini API client
-const apiKey = process.env.GEMINI_API_KEY;
-let ai: GoogleGenAI | null = null;
+// Dynamic server-side Gemini API client
+let aiClient: GoogleGenAI | null = null;
+let cachedApiKey = '';
 
-if (apiKey) {
-  ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
+function getGeminiClient(): GoogleGenAI | null {
+  const currentKey = process.env.GEMINI_API_KEY;
+  if (!currentKey) {
+    return null;
+  }
+  if (!aiClient || cachedApiKey !== currentKey) {
+    cachedApiKey = currentKey;
+    aiClient = new GoogleGenAI({
+      apiKey: currentKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
       },
-    },
-  });
+    });
+  }
+  return aiClient;
 }
 
 // Ted's optimized personality system instruction: warm, sleepy, short and playful
@@ -55,8 +63,8 @@ Knowledge about Ted's website (Ted's Little Dreamland ♡):
 - You also have a Nursery Scrapbook showing moods (Eepy 😴, Curious 🔍, Dreamy ✨), a Growth Chart measuring stars, and a Nursery Postcard.
 - Do NOT invent fake website features. Keep answers cozy, warm, and delightfully brief!`;
 
-// Fast Gemini models in priority order: lowest latency first
-const FAST_MODELS = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+// Fast and supported Gemini models in priority order
+const FAST_MODELS = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
 
 // POST /api/chat endpoint with SSE streaming and JSON fallback
 app.post('/api/chat', async (req, res) => {
@@ -67,33 +75,60 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Please provide conversation messages' });
     }
 
-    if (!ai) {
+    const client = getGeminiClient();
+    if (!client) {
+      const errPayload = {
+        error: 'service_unavailable',
+        message: 'eep... ted cannot reach the dream cloud right now because the api key is taking a little nap. ♡',
+      };
       if (stream) {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
-        res.write(`data: ${JSON.stringify({ error: 'service_unavailable', message: 'eep... ted cannot reach the dream cloud right now because the api key is taking a little nap. ♡' })}\n\n`);
+        res.write(`data: ${JSON.stringify(errPayload)}\n\n`);
         return res.end();
       }
-      return res.status(503).json({
-        error: 'service_unavailable',
-        message: 'eep... ted cannot reach the dream cloud right now because the api key is taking a little nap. ♡',
-      });
+      return res.status(503).json(errPayload);
     }
 
-    // Keep context focused to recent 6 messages to reduce latency and token usage
-    const recentMessages = messages.slice(-6);
+    // Clean and normalize messages
+    const validMessages = messages
+      .filter((m: { role?: string; text?: string }) => m && typeof m.text === 'string' && m.text.trim())
+      .map((m: { role: string; text: string }) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        text: m.text.trim(),
+      }));
 
-    // Format messages for Gemini API
-    const contents = recentMessages.map((m: { role: string; text: string }) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.text }],
-    }));
+    // Ensure conversation starts with a user turn
+    while (validMessages.length > 0 && validMessages[0].role === 'model') {
+      validMessages.shift();
+    }
+
+    if (validMessages.length === 0) {
+      return res.status(400).json({ error: 'No user messages provided' });
+    }
+
+    // Keep recent history (up to 8 turns)
+    const recentMessages = validMessages.slice(-8);
+
+    // Merge consecutive turns with the same role to conform to Gemini multi-turn requirements
+    const normalizedContents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+    for (const msg of recentMessages) {
+      const last = normalizedContents[normalizedContents.length - 1];
+      if (last && last.role === msg.role) {
+        last.parts[0].text += '\n' + msg.text;
+      } else {
+        normalizedContents.push({
+          role: msg.role as 'user' | 'model',
+          parts: [{ text: msg.text }],
+        });
+      }
+    }
 
     // Detect if visitor explicitly asked for a story to dynamically adapt token limit
-    const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.text || '';
+    const lastUserMsg = [...validMessages].reverse().find((m) => m.role === 'user')?.text || '';
     const isStoryRequest = /story|bedtime|fairytale|tale/i.test(lastUserMsg);
-    // Modest token cap: 140 tokens for normal conversational replies, 260 for bedtime stories
-    const maxOutputTokens = isStoryRequest ? 260 : 140;
+    // Generous token budget so reasoning + response tokens are never starved, while prompt limits length
+    const maxOutputTokens = isStoryRequest ? 800 : 400;
 
     // 1. Streaming response mode (progressive rendering for instant feedback)
     if (stream) {
@@ -106,43 +141,53 @@ app.post('/api/chat', async (req, res) => {
 
       for (const model of FAST_MODELS) {
         try {
-          const responseStream = await ai.models.generateContentStream({
+          const responseStream = await client.models.generateContentStream({
             model,
-            contents,
+            contents: normalizedContents,
             config: {
               systemInstruction: TED_SYSTEM_INSTRUCTION,
               temperature: 0.75,
+              thinkingConfig: {
+                thinkingLevel: ThinkingLevel.LOW,
+              },
               maxOutputTokens,
             },
           });
 
+          let hasSentText = false;
           for await (const chunk of responseStream) {
             const chunkText = chunk.text;
             if (chunkText) {
               res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+              hasSentText = true;
             }
           }
 
-          res.write('data: [DONE]\n\n');
-          res.end();
-          streamedSuccessfully = true;
-          break;
+          if (hasSentText) {
+            res.write('data: [DONE]\n\n');
+            res.end();
+            streamedSuccessfully = true;
+            break;
+          }
         } catch (streamErr: any) {
           console.warn(`Model ${model} streaming error, trying fallback:`, streamErr?.message || streamErr);
         }
       }
 
       if (!streamedSuccessfully) {
-        // Fallback to unary generateContent across models if streaming endpoint failed
+        // Fallback to unary generateContent across models if streaming failed
         let fallbackText = '';
         for (const model of FAST_MODELS) {
           try {
-            const resp = await ai.models.generateContent({
+            const resp = await client.models.generateContent({
               model,
-              contents,
+              contents: normalizedContents,
               config: {
                 systemInstruction: TED_SYSTEM_INSTRUCTION,
                 temperature: 0.75,
+                thinkingConfig: {
+                  thinkingLevel: ThinkingLevel.LOW,
+                },
                 maxOutputTokens,
               },
             });
@@ -158,7 +203,7 @@ app.post('/api/chat', async (req, res) => {
           res.write('data: [DONE]\n\n');
           res.end();
         } else {
-          res.write(`data: ${JSON.stringify({ error: 'eep! ted lost his dream connection for a tiny second... can we try again? ♡' })}\n\n`);
+          res.write(`data: ${JSON.stringify({ error: 'service_error', message: 'eep! ted lost his dream connection for a tiny second... can we try again? ♡' })}\n\n`);
           res.end();
         }
       }
@@ -171,12 +216,15 @@ app.post('/api/chat', async (req, res) => {
 
     for (const model of FAST_MODELS) {
       try {
-        const response = await ai.models.generateContent({
+        const response = await client.models.generateContent({
           model,
-          contents,
+          contents: normalizedContents,
           config: {
             systemInstruction: TED_SYSTEM_INSTRUCTION,
             temperature: 0.75,
+            thinkingConfig: {
+              thinkingLevel: ThinkingLevel.LOW,
+            },
             maxOutputTokens,
           },
         });
@@ -210,9 +258,10 @@ async function startServer() {
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.resolve(distPath, 'index.html'));
     });
   } else {
     const { createServer: createViteServer } = await import('vite');
