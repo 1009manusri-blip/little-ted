@@ -78,11 +78,13 @@ Ted is an adorable, sleepy, and gentle teddy bear who serves as a **Junior Dream
 ├── package.json                # Dependencies & scripts
 ├── tsconfig.json               # TypeScript configuration
 ├── vite.config.ts              # Vite bundler configuration
+├── server.ts                   # Express server with Vite middlewares & Gemini API
 └── src/
     ├── App.tsx                 # Root application component
     ├── index.css               # Global retro-kawaii typography & CSS layers
     ├── main.tsx                # React DOM entry point
     ├── components/
+    │   ├── TedChatWidget.tsx       # "Talk to Ted ♡" AI-powered character chatbot
     │   ├── 3d/
     │   │   ├── threeHelpers.ts     # Procedural 3D mesh generators & WebGL detection
     │   │   ├── TedHeroScene.tsx    # 3D interactive Hero scene with Ted & nursery props

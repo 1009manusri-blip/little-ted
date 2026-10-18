@@ -15,6 +15,7 @@ import { TinyNoteSection } from './components/TinyNoteSection';
 import { SurpriseModal } from './components/SurpriseModal';
 import { SparkleCursor } from './components/SparkleCursor';
 import { Footer } from './components/Footer';
+import { TedChatWidget } from './components/TedChatWidget';
 import { soundManager } from './utils/soundEffects';
 import { fireCuteConfetti } from './utils/confetti';
 
@@ -135,6 +136,9 @@ export default function App() {
 
       {/* 7. FOOTER */}
       <Footer onNavigate={scrollToSection} />
+
+      {/* 8. TALK TO TED ♡ FLOATING AI CHATBOT */}
+      <TedChatWidget />
     </div>
   );
 }
